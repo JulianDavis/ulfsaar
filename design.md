@@ -1,0 +1,16 @@
+# SIP Fuzzer
+
+This is a design document for a general purpose black box SIP fuzzer written in Zig version 0.16.0. The fuzzer will contain two components. One being the fuzzer which will run on the host, the other being a target process watchdog which will run on-device. These components will communicate with each other across a named pipe. The fuzzer will be built to run on Linux x86-64 and the target process watchdog will run on whatever device architecture is needed, initially this will be 32-bit ARM.
+
+The fuzzer will take a directory for the corpus. Inside the directory will be one or more files each with a unique SIP message. The SIP message will be templated so the user can define which parts should be mutated and which should be static. The fuzzer will load all of the files in the corpus directory into memory once at startup in an attempt to keep things fast. The fuzzer will then iterate through the SIP messages mutating one then sending it, then moving on to the next message and mutating it then sending it, and so on. Once the last SIP message is sent from the corpus the fuzzer should loop back around to the first message and continue, each time mutating it with new unique results. Each SIP message sent should be followed by a CANCEL SIP message that will be static and not mutated. The CANCEL message is required to enable sending of the next SIP message without holding up the phone. Speed is a very important factor when fuzzing. The fuzzer will run in the foreground and periodically print every 100 runs as well as anytime a start, stop, or crash message is received from the watchdog. The fuzzer will use radamsa as a C library for the mutator. I have created a fork of radamsa which includes a GitHub action to build it as a library: https://github.com/JulianDavis/radamsa
+
+The fuzzer should take the following arguments:
+    * Target IP address
+    * Target port (default 5060)
+    * Filepath of directory containing corpus
+
+The target process watchdog should take the following arguments:
+    * Target PID
+    * Filepath of shell script used to start the process
+
+The target process watchdog will begin with an argument of a filepath which contains a shell script. The shell script will be responsible for restarting the process on a crash. An example of this shell script would be to run the target process and background it and then sleep for a period of time required for the process to fully startup and begin running. The target process watchdog will send various commands over the named pipe to inform the fuzzer of the current status. The primary messages will be start, stop, and crash. Start will indicate to the fuzzer that the shell script returned an exit code of zero and the target is ready to be fuzzed. Stop will be sent whenever the target process watchdog is exiting, or when capturing a SIGINT if ctrl-C is sent to the target process watchdog. Crash will indicate to the fuzzer that the target has stopped running presumably from a crash. The target process watchdog will repeatedly check for one unique instance of the target running to determine if it has crashed or not. The target process watchdog should take a PID argument at startup which will indicate what process to monitor.

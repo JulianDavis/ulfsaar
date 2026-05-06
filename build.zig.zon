@@ -1,0 +1,8 @@
+.{
+    .name = .ulfsaar,
+    .fingerprint = 0xb80a89ad1267a109,
+    .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
+    .paths = .{ "build.zig", "build.zig.zon", "src", "deps", "corpus" },
+    .dependencies = .{},
+}
