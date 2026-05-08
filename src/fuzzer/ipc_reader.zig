@@ -25,7 +25,7 @@ pub const IpcReader = struct {
                 std.debug.print("[ipc] recv error: {}\n", .{err});
                 return;
             };
-            const payload = std.mem.trimRight(u8, msg.data, " \t\r\n");
+            const payload = std.mem.trimEnd(u8, msg.data, " \t\r\n");
             if (std.ascii.eqlIgnoreCase(payload, "START")) {
                 std.debug.print("[ipc] target start\n", .{});
             } else if (std.ascii.eqlIgnoreCase(payload, "STOP")) {

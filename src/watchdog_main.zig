@@ -78,22 +78,20 @@ pub fn main(init: std.process.Init) !void {
     }
 
     // Read comm name from /proc/<pid>/comm
-    var comm_path_buf: [64]u8 = undefined;
-    const comm_path = try std.fmt.bufPrint(&comm_path_buf, "/proc/{s}/comm", .{initial_pid.?});
     var comm_buf: [64]u8 = undefined;
-    const comm_file = try std.Io.Dir.openFileAbsolute(io, comm_path, .{});
-    var read_buf: [256]u8 = undefined;
-    var comm_reader = comm_file.reader(io, &read_buf);
-    const comm_n = try comm_reader.readSliceShort(&comm_buf);
-    comm_file.close(io);
-    const target_comm = std.mem.trimRight(u8, comm_buf[0..comm_n], " \t\r\n");
+    var proc_dir = try std.Io.Dir.openDirAbsolute(io, "/proc", .{});
+    defer proc_dir.close(io);
+    var pid_comm_buf: [32]u8 = undefined;
+    const pid_comm_path = try std.fmt.bufPrint(&pid_comm_buf, "{s}/comm", .{initial_pid.?});
+    const comm_data = try proc_dir.readFile(io, pid_comm_path, &comm_buf);
+    const target_comm = std.mem.trimEnd(u8, comm_data, " \t\r\n");
 
     std.debug.print("[watchdog] monitoring '{s}' (pid {s}), script={s}, fuzzer={s}:{d}, poll={d}ms\n", .{
         target_comm, initial_pid.?, restart_script.?, fuzzer_ip.?, fuzzer_port, poll_ms,
     });
 
     // Install SIGINT handler
-    try signals.install();
+    signals.install();
 
     // Init IPC writer
     var ipc = try ipc_mod.IpcWriter.init(io, fuzzer_ip.?, fuzzer_port);

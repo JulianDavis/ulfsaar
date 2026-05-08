@@ -20,7 +20,7 @@ pub fn checkAlive(io: std.Io, target_comm: []const u8) bool {
         const comm_rel = std.fmt.bufPrint(&path_buf, "{s}/comm", .{entry.name}) catch continue;
 
         const data = proc_dir.readFile(io, comm_rel, &comm_buf) catch continue;
-        const comm = std.mem.trimRight(u8, data, " \t\r\n");
+        const comm = std.mem.trimEnd(u8, data, " \t\r\n");
 
         if (std.mem.eql(u8, comm, target_comm)) count += 1;
     }
